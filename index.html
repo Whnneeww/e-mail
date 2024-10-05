@@ -3,11 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Receiver</title>
-    <script src="receiver.js" defer></script>
+    <title>メール受信システム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 <body>
-    <h1>Email Receiver</h1>
-    <div id="output"></div>
+    <h1>メール受信システム</h1>
+    <div id="messages"></div>
+
+    <script>
+        const socket = new WebSocket('wss://cloud.achex.ca/qiita');
+
+        socket.addEventListener('open', function (event) {
+            console.log('接続がオープンになりました', event);
+            socket.send('{"auth":"receiver", "password":"263845"}');
+        });
+
+        socket.addEventListener('message', function (event) {
+            console.log('メッセージ受信:', event);
+            const json = JSON.parse(event.data);
+            console.log(json);
+            if (json.auth === 'OK') {
+                return;
+            }
+            displayMessage(json.msg);
+        });
+
+        function displayMessage(msg) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.textContent = msg;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // スクロールを下に移動
+        }
+
+        socket.addEventListener('error', function (event) {
+            console.error('WebSocketエラー:', event);
+        });
+
+        socket.addEventListener('close', function (event) {
+            console.log('WebSocket接続が閉じられました', event);
+        });
+    </script>
 </body>
 </html>
