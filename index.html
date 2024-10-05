@@ -22,22 +22,41 @@
     <div id="messages"></div>
 
     <script>
-        const socket = new WebSocket('wss://cloud.achex.ca/i-i-f5-si-mailwss/musgebhhhh');
+        let socket;
 
-        socket.addEventListener('open', function (event) {
-            console.log('接続がオープンになりました', event);
-            socket.send('{"auth":"receiver", "password":"263845"}');
-        });
+        function connect() {
+            socket = new WebSocket('wss://cloud.achex.ca/i-i-f5-si-mailwss/musgebhhhh');
 
-        socket.addEventListener('message', function (event) {
-            console.log('メッセージ受信:', event);
-            const json = JSON.parse(event.data);
-            console.log(json);
-            if (json.auth === 'OK') {
-                return;
-            }
-            displayMessage(json.msg);
-        });
+            socket.addEventListener('open', function (event) {
+                console.log('接続がオープンになりました', event);
+                socket.send('{"auth":"receiver", "password":"263845"}');
+            });
+
+            socket.addEventListener('message', function (event) {
+                console.log('メッセージ受信:', event);
+                const json = JSON.parse(event.data);
+                console.log(json);
+                if (json.auth === 'OK') {
+                    return;
+                }
+                displayMessage(json.msg);
+
+                // メッセージを受信したら再接続
+                setTimeout(() => {
+                    socket.close(); // 接続を閉じて再接続の準備
+                }, 1000); // 1秒後に閉じる
+            });
+
+            socket.addEventListener('error', function (event) {
+                console.error('WebSocketエラー:', event);
+            });
+
+            socket.addEventListener('close', function (event) {
+                console.log('WebSocket接続が閉じられました', event);
+                // 再接続を試みる
+                setTimeout(connect, 1000); // 1秒後に再接続
+            });
+        }
 
         function displayMessage(msg) {
             const messagesDiv = document.getElementById('messages');
@@ -47,13 +66,8 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight; // スクロールを下に移動
         }
 
-        socket.addEventListener('error', function (event) {
-            console.error('WebSocketエラー:', event);
-        });
-
-        socket.addEventListener('close', function (event) {
-            console.log('WebSocket接続が閉じられました', event);
-        });
+        // 最初の接続
+        connect();
     </script>
 </body>
 </html>
