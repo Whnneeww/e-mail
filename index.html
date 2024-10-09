@@ -1,73 +1,101 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>メール受信システム</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        #messages {
-            border: 1px solid #ccc;
-            padding: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メール受信- ベータ版</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+    #messages {
+      border: 1px solid #ccc;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      background-color: #fff;
+      border-radius: 5px;
+    }
+    .timeline {
+      position: relative;
+      padding: 20px 0;
+    }
+    .timeline-item {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 10px;
+      background: #e0e7ff;
+      position: relative;
+    }
+    .timeline-item:before {
+      content: '';
+      position: absolute;
+      left: -15px;
+      top: 10px;
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: #4c6ef5;
+    }
+  </style>
 </head>
 <body>
-    <h1>メール受信システム</h1>
-    <div id="messages"></div>
+  <h1>メール受信- ベータ版</h1>
+  <div id="messages" class="timeline"></div>
 
-    <script>
-        let socket;
+  <script>
+    let socket;
+    let reconnectInterval = 1000; // 再接続の間隔（ミリ秒）
+    
+    function connect() {
+      // WebSocketの接続先URLを指定
+      const socketUrl = 'wss://cloud.achex.ca/zephnmailfws'; // ここに半角英数字を入れてください
+      
+      socket = new WebSocket(socketUrl);
 
-        function connect() {
-            socket = new WebSocket('wss://cloud.achex.ca/i-i-f5-si-mailwss/musgebhhhh');
+      socket.onopen = () => {
+        console.log('WebSocket接続が開かれました。');
+      };
 
-            socket.addEventListener('open', function (event) {
-                console.log('接続がオープンになりました', event);
-                socket.send('{"auth":"receiver", "password":"263845"}');
-            });
+      socket.onmessage = (event) => {
+        console.log('メッセージを受信:', event.data);
+        // 受信したデータをタイムライン形式で表示する
+        const messagesDiv = document.getElementById('messages');
+        const timelineItem = document.createElement('div');
+        timelineItem.className = 'timeline-item';
+        timelineItem.textContent = `受信メッセージ: ${event.data}`;
+        messagesDiv.appendChild(timelineItem);
 
-            socket.addEventListener('message', function (event) {
-                console.log('メッセージ受信:', event);
-                const json = JSON.parse(event.data);
-                console.log(json);
-                if (json.auth === 'OK') {
-                    return;
-                }
-                displayMessage(json.msg);
+        // スクロールを自動で下まで持っていく
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      };
 
-                // メッセージを受信したら再接続
-                setTimeout(() => {
-                    socket.close(); // 接続を閉じて再接続の準備
-                }, 1000); // 1秒後に閉じる
-            });
+      socket.onerror = (error) => {
+        console.error('WebSocketエラー:', error);
+      };
 
-            socket.addEventListener('error', function (event) {
-                console.error('WebSocketエラー:', event);
-            });
-
-            socket.addEventListener('close', function (event) {
-                console.log('WebSocket接続が閉じられました', event);
-                // 再接続を試みる
-                setTimeout(connect, 1000); // 1秒後に再接続
-            });
+      socket.onclose = (event) => {
+        if (event.wasClean) {
+          console.log(`接続は正常に閉じられました。コード: ${event.code}`);
+        } else {
+          console.error('接続が異常終了しました。再接続を試みます...');
+          reconnect(); // 自動再接続を試みる
         }
+      };
+    }
 
-        function displayMessage(msg) {
-            const messagesDiv = document.getElementById('messages');
-            const messageElement = document.createElement('div');
-            messageElement.textContent = msg;
-            messagesDiv.appendChild(messageElement);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight; // スクロールを下に移動
-        }
-
-        // 最初の接続
+    function reconnect() {
+      setTimeout(() => {
+        console.log('再接続中...');
         connect();
-    </script>
+      }, reconnectInterval);
+    }
+
+    // 最初の接続を開始
+    connect();
+  </script>
 </body>
 </html>
